@@ -1,4 +1,9 @@
+use std::io::Write;
+
 use clap::Parser;
+
+use crate::connection::play_game;
+use crate::proto::Error;
 
 ///
 /// Rinee is a project to create a stronger heuristic reversi AI.
@@ -10,28 +15,67 @@ struct Args {
     /// A hostname to connect to.
     ///
     #[arg(short = 'H', long, default_value = "localhost")]
-    host: String,
+    pub host: String,
 
     ///
     /// A port to connect to.
     ///
     #[arg(short, long, default_value = "3000")]
-    port: u16,
+    pub port: u16,
 
     ///
     /// A player name.
     ///
     #[arg(short, long, default_value = "anonymous")]
-    name: String,
+    pub name: String,
 }
 
-fn main() {
+#[async_std::main]
+async fn main() {
     let args = Args::parse();
 
-    println!("{}", args.port);
+    // Warn the user if the process is in debug mode.
+    if cfg!(debug_assertions) {
+        use sha2::{Digest, Sha256};
 
-    println!("Hello, world!");
+        write_log!(WARN, "THIS PROCESS IS IN DEBUG MODE.");
+        write_log!(WARN, "THE PERFORMANCE OF THE AI WILL BE DEGRADED.");
+        write_log!(
+            WARN,
+            "ADD `--release` BUILD FLAG TO LET THIS AI RUN WITHOUT RESTRICTIONS."
+        );
+
+        print!(">>> Only if you understand what it means and want to proceed, type \"a magic phrase\" to continue: ");
+
+        std::io::stdout().flush().unwrap();
+        let mut buffer = String::new();
+        std::io::stdin().read_line(&mut buffer).unwrap();
+        let mut hasher = Sha256::new();
+        hasher.update(buffer);
+
+        if format!("{:X}", hasher.finalize())
+            != "6B3A55E0261B0304143F805A24924D0C1C44524821305F31D9277843B8A10F4E"
+        {
+            write_log!(LOG, "Did you really read the instruction of this program?");
+            write_log!(ERROR, "Rebuild this project with `--release` flag.");
+            return;
+        }
+    }
+
+    write_log!(LOG, "Rinee is started.");
+
+    match play_game(&args).await {
+        Ok(_) => println!("The game ends. Enjoy your day!"),
+        Err(Error::IO(e)) => {
+            write_log!(ERROR, "Detected an I/O error: {}", e);
+        }
+        Err(Error::Parser) => {
+            write_log!(ERROR, "Detected a parser error.");
+        }
+    }
 }
 
+mod connection;
+mod log;
 mod parser;
 mod proto;

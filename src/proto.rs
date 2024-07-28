@@ -1,3 +1,14 @@
+pub enum Error {
+    IO(std::io::Error),
+    Parser,
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::IO(err)
+    }
+}
+
 pub enum GameResult {
     Win,
     Lose,
@@ -11,9 +22,25 @@ pub struct GameStat {
     pub loses: u32,
 }
 
+pub enum Color {
+    None,
+    Black,
+    White,
+}
+
+impl std::fmt::Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Color::None => write!(f, "None"),
+            Color::Black => write!(f, "Black"),
+            Color::White => write!(f, "White"),
+        }
+    }
+}
+
 pub enum Request {
     Start {
-        color: u8,
+        color: Color,
         opponent: String,
         remains: u32,
     },
