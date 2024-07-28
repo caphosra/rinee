@@ -38,11 +38,11 @@ async fn main() {
     if cfg!(debug_assertions) {
         use sha2::{Digest, Sha256};
 
-        write_log!(WARN, "THIS PROCESS IS IN DEBUG MODE.");
-        write_log!(WARN, "THE PERFORMANCE OF THE AI WILL BE DEGRADED.");
         write_log!(
             WARN,
-            "ADD `--release` BUILD FLAG TO LET THIS AI RUN WITHOUT RESTRICTIONS."
+            r"THIS PROCESS IS IN DEBUG MODE.
+THE PERFORMANCE OF THE AI WILL BE DEGRADED.
+ADD `--release` BUILD FLAG TO LET THIS AI RUN WITHOUT RESTRICTIONS."
         );
 
         print!(">>> Only if you understand what it means and want to proceed, type \"a magic phrase\" to continue: ");
@@ -75,6 +75,7 @@ async fn main() {
     }
 }
 
+mod board;
 mod connection;
 mod log;
 mod parser;

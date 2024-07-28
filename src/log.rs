@@ -2,23 +2,32 @@
 macro_rules! write_log {
     (ERROR, $($arg:tt)*) => {
         use colored::Colorize;
-        println!("{} {}", "[ERROR]".red(), format!($($arg)*));
+        for line in format!($($arg)*).lines() {
+            println!("{} {}", "[ERROR]".red(), line);
+        }
     };
     (WARN, $($arg:tt)*) => {
         if cfg!(debug_assertions) {
             use colored::Colorize;
-            println!(" {} {}", "[WARN]".yellow(), format!($($arg)*));
+            for line in format!($($arg)*).lines() {
+                println!("{} {}", " [WARN]".yellow(), line);
+            }
         }
     };
     (LOG, $($arg:tt)*) => {
         if cfg!(debug_assertions) {
-            println!("  [LOG] {}",  format!($($arg)*));
+            for line in format!($($arg)*).lines() {
+                println!("  [LOG] {}", line);
+            }
         }
     };
     (DEBUG, $($arg:tt)*) => {
         if cfg!(debug_assertions) {
             use colored::Colorize;
-            println!("{}", format!("[DEBUG] {}", format!($($arg)*)).color(colored::Color::TrueColor { r: 100, g: 100, b: 100 }));
+            for line in format!($($arg)*).lines() {
+                let color = colored::Color::TrueColor { r: 100, g: 100, b: 100 };
+                println!("{}", format!("[DEBUG] {}", line).color(color));
+            }
         }
     }
 }
