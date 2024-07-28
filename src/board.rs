@@ -155,7 +155,8 @@ mod test {
     #[test]
     fn test_new_board() {
         let board = new_board();
-        assert_eq!(board.to_string_as_board(),
+        assert_eq!(
+            board.to_string_as_board(),
             concat!(
                 "        \n",
                 "        \n",
@@ -173,7 +174,10 @@ mod test {
     fn test_get_valid_moves() {
         let board = new_board();
         let moves = get_valid_moves(board.black, board.white);
-        assert_eq!(moves, get_pos(3, 2)| get_pos(2, 3) | get_pos(5, 4) | get_pos(4, 5));
+        assert_eq!(
+            moves,
+            get_pos(3, 2) | get_pos(2, 3) | get_pos(5, 4) | get_pos(4, 5)
+        );
     }
 
     #[test]
@@ -181,7 +185,8 @@ mod test {
         let mut board = new_board();
 
         put(get_pos(4, 5), &mut board.black, &mut board.white);
-        assert_eq!(board.to_string_as_board(),
+        assert_eq!(
+            board.to_string_as_board(),
             concat!(
                 "        \n",
                 "        \n",
@@ -195,7 +200,8 @@ mod test {
         );
 
         put(get_pos(3, 5), &mut board.white, &mut board.black);
-        assert_eq!(board.to_string_as_board(),
+        assert_eq!(
+            board.to_string_as_board(),
             concat!(
                 "        \n",
                 "        \n",
@@ -209,7 +215,8 @@ mod test {
         );
 
         put(get_pos(2, 3), &mut board.black, &mut board.white);
-        assert_eq!(board.to_string_as_board(),
+        assert_eq!(
+            board.to_string_as_board(),
             concat!(
                 "        \n",
                 "        \n",
