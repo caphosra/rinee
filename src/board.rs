@@ -19,6 +19,11 @@ pub fn new_board() -> Board {
     }
 }
 
+#[inline]
+fn get_pos(x: u8, y: u8) -> BoardView {
+    1 << (x + y * 8)
+}
+
 ///
 /// Get valid moves from the board views.
 ///
@@ -28,80 +33,38 @@ pub fn get_valid_moves(me: BoardView, opponent: BoardView) -> BoardView {
     let diagonal = opponent & 0x007e7e7e7e7e7e00;
 
     let blank = !(me | opponent);
+    let mut valid = 0;
+
+    macro_rules! get_valid_move {
+        ($mask:expr, $shift:tt, $shift_num:expr) => {
+            let mut tmp = $mask & (me $shift $shift_num);
+            tmp |= $mask & (tmp $shift $shift_num);
+            tmp |= $mask & (tmp $shift $shift_num);
+            tmp |= $mask & (tmp $shift $shift_num);
+            tmp |= $mask & (tmp $shift $shift_num);
+            tmp |= $mask & (tmp $shift $shift_num);
+            valid |= blank & (tmp $shift $shift_num);
+        };
+    }
 
     // Left
-    let mut tmp = horizontal & (me << 1);
-    tmp |= horizontal & (tmp << 1);
-    tmp |= horizontal & (tmp << 1);
-    tmp |= horizontal & (tmp << 1);
-    tmp |= horizontal & (tmp << 1);
-    tmp |= horizontal & (tmp << 1);
-    let mut valid = blank & (tmp << 1);
-
+    get_valid_move!(horizontal, <<, 1);
     // Right
-    tmp = horizontal & (me >> 1);
-    tmp |= horizontal & (tmp >> 1);
-    tmp |= horizontal & (tmp >> 1);
-    tmp |= horizontal & (tmp >> 1);
-    tmp |= horizontal & (tmp >> 1);
-    tmp |= horizontal & (tmp >> 1);
-    valid |= blank & (tmp >> 1);
-
+    get_valid_move!(horizontal, >>, 1);
     // Up
-    tmp = vertical & (me << 8);
-    tmp |= vertical & (tmp << 8);
-    tmp |= vertical & (tmp << 8);
-    tmp |= vertical & (tmp << 8);
-    tmp |= vertical & (tmp << 8);
-    tmp |= vertical & (tmp << 8);
-    valid |= blank & (tmp << 8);
-
+    get_valid_move!(vertical, <<, 8);
     // Down
-    tmp = vertical & (me >> 8);
-    tmp |= vertical & (tmp >> 8);
-    tmp |= vertical & (tmp >> 8);
-    tmp |= vertical & (tmp >> 8);
-    tmp |= vertical & (tmp >> 8);
-    tmp |= vertical & (tmp >> 8);
-    valid |= blank & (tmp >> 8);
-
+    get_valid_move!(vertical, >>, 8);
     // Right up
-    tmp = diagonal & (me << 7);
-    tmp |= diagonal & (tmp << 7);
-    tmp |= diagonal & (tmp << 7);
-    tmp |= diagonal & (tmp << 7);
-    tmp |= diagonal & (tmp << 7);
-    tmp |= diagonal & (tmp << 7);
-    valid |= blank & (tmp << 7);
-
+    get_valid_move!(diagonal, <<, 7);
     // Left up
-    tmp = diagonal & (me << 9);
-    tmp |= diagonal & (tmp << 9);
-    tmp |= diagonal & (tmp << 9);
-    tmp |= diagonal & (tmp << 9);
-    tmp |= diagonal & (tmp << 9);
-    tmp |= diagonal & (tmp << 9);
-    valid |= blank & (tmp << 9);
-
+    get_valid_move!(diagonal, <<, 9);
     // Right down
-    tmp = diagonal & (me >> 9);
-    tmp |= diagonal & (tmp >> 9);
-    tmp |= diagonal & (tmp >> 9);
-    tmp |= diagonal & (tmp >> 9);
-    tmp |= diagonal & (tmp >> 9);
-    tmp |= diagonal & (tmp >> 9);
-    valid |= blank & (tmp >> 9);
-
+    get_valid_move!(diagonal, >>, 9);
     // Left down
-    tmp = diagonal & (me >> 7);
-    tmp |= diagonal & (tmp >> 7);
-    tmp |= diagonal & (tmp >> 7);
-    tmp |= diagonal & (tmp >> 7);
-    tmp |= diagonal & (tmp >> 7);
-    tmp |= diagonal & (tmp >> 7);
-    valid |= blank & (tmp >> 7);
+    get_valid_move!(diagonal, >>, 7);
 
-    return valid
+    valid
 }
 
 pub fn put(pos: BoardView, player: &mut BoardView, opponent: &mut BoardView) {
@@ -153,10 +116,10 @@ impl DebugBoard for Board {
         let mut board = String::new();
         for y in 0..8 {
             for x in 0..8 {
-                let idx = y * 8 + x;
-                if self.black & (1 << idx) != 0 {
+                let pos = get_pos(x, y);
+                if self.black & pos != 0 {
                     board.push('B');
-                } else if self.white & (1 << idx) != 0 {
+                } else if self.white & pos != 0 {
                     board.push('W');
                 } else {
                     board.push(' ');
@@ -210,14 +173,14 @@ mod test {
     fn test_get_valid_moves() {
         let board = new_board();
         let moves = get_valid_moves(board.black, board.white);
-        assert_eq!(moves, 1 << (3 + 2 * 8) | 1 << (2 + 3 * 8) | 1 << (5 + 4 * 8) | 1 << (4 + 5 * 8));
+        assert_eq!(moves, get_pos(3, 2)| get_pos(2, 3) | get_pos(5, 4) | get_pos(4, 5));
     }
 
     #[test]
     fn test_put() {
         let mut board = new_board();
 
-        put(1 << (4 + 5 * 8), &mut board.black, &mut board.white);
+        put(get_pos(4, 5), &mut board.black, &mut board.white);
         assert_eq!(board.to_string_as_board(),
             concat!(
                 "        \n",
@@ -231,7 +194,7 @@ mod test {
             )
         );
 
-        put(1 << (3 + 5 * 8), &mut board.white, &mut board.black);
+        put(get_pos(3, 5), &mut board.white, &mut board.black);
         assert_eq!(board.to_string_as_board(),
             concat!(
                 "        \n",
@@ -245,7 +208,7 @@ mod test {
             )
         );
 
-        put(1 << (2 + 3 * 8), &mut board.black, &mut board.white);
+        put(get_pos(2, 3), &mut board.black, &mut board.white);
         assert_eq!(board.to_string_as_board(),
             concat!(
                 "        \n",
