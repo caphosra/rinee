@@ -9,6 +9,7 @@ use crate::{proto::Color, tzcnt64};
 
 pub type BoardView = u64;
 
+#[derive(Clone, Copy)]
 pub struct Board {
     pub player: BoardView,
     pub opponent: BoardView,
@@ -161,16 +162,16 @@ impl DebugBoard for Board {
 #[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! print_board {
-    ($board:expr, $color:expr) => {{
+    ($level:tt, $board:expr, $color:expr) => {{
         use crate::board::DebugBoard;
-        crate::write_log!(LOG, "{}", $board.to_string_as_board($color));
+        crate::write_log!($level, "{}", $board.to_string_as_board($color));
     }};
 }
 
 #[cfg(not(debug_assertions))]
 #[macro_export]
 macro_rules! print_board {
-    ($board:expr, $color:expr) => {};
+    ($level:tt, $board:expr, $color:expr) => {};
 }
 
 #[cfg(test)]

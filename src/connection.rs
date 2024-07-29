@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use async_std::{
     io::{prelude::BufReadExt, BufReader, BufWriter, WriteExt},
     net::TcpStream,
@@ -17,7 +19,7 @@ pub async fn do_move(
     me: &Color,
     writer: &mut BufWriter<&TcpStream>,
 ) -> Result<(), Error> {
-    match select_best_move(&board) {
+    match select_best_move(*board, Duration::from_secs(1)).await {
         Some(view) => {
             put(view, &mut board.player, &mut board.opponent);
             let (x, y) = from_pos(view);
@@ -26,7 +28,7 @@ pub async fn do_move(
                 .await?;
 
             write_log!(LOG, "ME {}{}", (b'A' + x) as char, y + 1);
-            print_board!(board, &me);
+            print_board!(LOG, board, &me);
         }
         None => {
             writer.write(b"MOVE PASS\n").await?;
@@ -87,7 +89,7 @@ pub async fn play_game(args: &Args) -> Result<(), Error> {
             Request::Move { x, y } => {
                 put(get_pos(x, y), &mut board.opponent, &mut board.player);
                 write_log!(LOG, "OPPONENT {}{}", (b'A' + x) as char, y + 1);
-                print_board!(board, &me);
+                print_board!(LOG, board, &me);
 
                 do_move(&mut board, &me, &mut writer).await?;
             }
