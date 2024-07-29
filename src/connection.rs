@@ -29,7 +29,7 @@ pub async fn do_move(
             print_board!(board, &me);
         }
         None => {
-            writer.write(b"PASS\n").await?;
+            writer.write(b"MOVE PASS\n").await?;
         }
     }
     writer.flush().await?;
