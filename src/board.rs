@@ -170,7 +170,7 @@ macro_rules! print_board {
 #[cfg(not(debug_assertions))]
 #[macro_export]
 macro_rules! print_board {
-    ($board:expr) => {};
+    ($board:expr, $color:expr) => {};
 }
 
 #[cfg(test)]
