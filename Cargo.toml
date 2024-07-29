@@ -3,6 +3,9 @@ name = "rinee"
 version = "0.1.0"
 edition = "2021"
 
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-cpu=native"]
+
 [dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
 clap = { version = "4.5.11", features = ["derive"] }

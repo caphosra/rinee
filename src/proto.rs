@@ -15,6 +15,16 @@ pub enum GameResult {
     Tie,
 }
 
+impl std::fmt::Display for GameResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            GameResult::Win => write!(f, "Win"),
+            GameResult::Lose => write!(f, "Lose"),
+            GameResult::Tie => write!(f, "Tie"),
+        }
+    }
+}
+
 pub struct GameStat {
     pub name: String,
     pub score: i32,
@@ -23,7 +33,6 @@ pub struct GameStat {
 }
 
 pub enum Color {
-    None,
     Black,
     White,
 }
@@ -31,7 +40,6 @@ pub enum Color {
 impl std::fmt::Display for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Color::None => write!(f, "None"),
             Color::Black => write!(f, "Black"),
             Color::White => write!(f, "White"),
         }

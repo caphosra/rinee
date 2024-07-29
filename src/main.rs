@@ -75,8 +75,10 @@ ADD `--release` BUILD FLAG TO LET THIS AI RUN WITHOUT RESTRICTIONS."
     }
 }
 
+mod agent;
 mod board;
 mod connection;
 mod log;
 mod parser;
 mod proto;
+mod util;

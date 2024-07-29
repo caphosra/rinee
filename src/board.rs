@@ -5,23 +5,37 @@
 //  https://qiita.com/sensuikan1973/items/459b3e11d91f3cb37e43 (Swift)
 //
 
+use crate::{proto::Color, tzcnt64};
+
 pub type BoardView = u64;
 
 pub struct Board {
-    pub black: BoardView,
-    pub white: BoardView,
+    pub player: BoardView,
+    pub opponent: BoardView,
 }
 
-pub fn new_board() -> Board {
-    Board {
-        black: 0x0000000810000000,
-        white: 0x0000001008000000,
+pub fn new_board(me: &Color) -> Board {
+    match me {
+        Color::Black => Board {
+            player: 0x0000000810000000,
+            opponent: 0x0000001008000000,
+        },
+        Color::White => Board {
+            player: 0x0000001008000000,
+            opponent: 0x0000000810000000,
+        },
     }
 }
 
 #[inline]
-fn get_pos(x: u8, y: u8) -> BoardView {
-    1 << (x + y * 8)
+pub fn get_pos(x: u8, y: u8) -> BoardView {
+    1 << (x | (y << 3))
+}
+
+#[inline]
+pub fn from_pos(view: BoardView) -> (u8, u8) {
+    let v = tzcnt64!(view);
+    ((v & 0b111) as u8, (v >> 3) as u8)
 }
 
 ///
@@ -107,22 +121,33 @@ pub fn put(pos: BoardView, player: &mut BoardView, opponent: &mut BoardView) {
 
 #[cfg(debug_assertions)]
 pub trait DebugBoard {
-    fn to_string_as_board(&self) -> String;
+    fn to_string_as_board(&self, me: &Color) -> String;
 }
 
 #[cfg(debug_assertions)]
 impl DebugBoard for Board {
-    fn to_string_as_board(&self) -> String {
+    fn to_string_as_board(&self, me: &Color) -> String {
+        let valid = get_valid_moves(self.player, self.opponent);
         let mut board = String::new();
         for y in 0..8 {
             for x in 0..8 {
                 let pos = get_pos(x, y);
-                if self.black & pos != 0 {
-                    board.push('B');
-                } else if self.white & pos != 0 {
-                    board.push('W');
+                if valid & pos != 0 {
+                    assert_eq!(self.player & pos, 0);
+                    assert_eq!(self.opponent & pos, 0);
+                    board.push('+');
+                } else if self.player & pos != 0 {
+                    match me {
+                        Color::Black => board.push('B'),
+                        Color::White => board.push('W'),
+                    }
+                } else if self.opponent & pos != 0 {
+                    match me {
+                        Color::Black => board.push('W'),
+                        Color::White => board.push('B'),
+                    }
                 } else {
-                    board.push(' ');
+                    board.push('-');
                 }
             }
             if y != 7 {
@@ -136,9 +161,9 @@ impl DebugBoard for Board {
 #[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! print_board {
-    ($board:expr) => {{
+    ($board:expr, $color:expr) => {{
         use crate::board::DebugBoard;
-        crate::write_log!(LOG, "{}", $board.to_string_as_board());
+        crate::write_log!(LOG, "{}", $board.to_string_as_board($color));
     }};
 }
 
@@ -153,27 +178,32 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_from_pos() {
+        assert_eq!(from_pos(get_pos(5, 2)), (5, 2));
+    }
+
+    #[test]
     fn test_new_board() {
-        let board = new_board();
+        let board = new_board(&Color::Black);
         assert_eq!(
-            board.to_string_as_board(),
+            board.to_string_as_board(&Color::Black),
             concat!(
-                "        \n",
-                "        \n",
-                "        \n",
-                "   WB   \n",
-                "   BW   \n",
-                "        \n",
-                "        \n",
-                "        "
+                "--------\n",
+                "--------\n",
+                "---+----\n",
+                "--+WB---\n",
+                "---BW+--\n",
+                "----+---\n",
+                "--------\n",
+                "--------"
             )
         );
     }
 
     #[test]
     fn test_get_valid_moves() {
-        let board = new_board();
-        let moves = get_valid_moves(board.black, board.white);
+        let board = new_board(&Color::Black);
+        let moves = get_valid_moves(board.player, board.opponent);
         assert_eq!(
             moves,
             get_pos(3, 2) | get_pos(2, 3) | get_pos(5, 4) | get_pos(4, 5)
@@ -182,50 +212,50 @@ mod test {
 
     #[test]
     fn test_put() {
-        let mut board = new_board();
+        let mut board = new_board(&Color::Black);
 
-        put(get_pos(4, 5), &mut board.black, &mut board.white);
+        put(get_pos(4, 5), &mut board.player, &mut board.opponent);
         assert_eq!(
-            board.to_string_as_board(),
+            board.to_string_as_board(&Color::Black),
             concat!(
-                "        \n",
-                "        \n",
-                "        \n",
-                "   WB   \n",
-                "   BB   \n",
-                "    B   \n",
-                "        \n",
-                "        "
+                "--------\n",
+                "--------\n",
+                "--++----\n",
+                "--+WB---\n",
+                "---BB---\n",
+                "----B---\n",
+                "--------\n",
+                "--------"
             )
         );
 
-        put(get_pos(3, 5), &mut board.white, &mut board.black);
+        put(get_pos(3, 5), &mut board.opponent, &mut board.player);
         assert_eq!(
-            board.to_string_as_board(),
+            board.to_string_as_board(&Color::Black),
             concat!(
-                "        \n",
-                "        \n",
-                "        \n",
-                "   WB   \n",
-                "   WB   \n",
-                "   WB   \n",
-                "        \n",
-                "        "
+                "--------\n",
+                "--------\n",
+                "--+-----\n",
+                "--+WB---\n",
+                "--+WB---\n",
+                "--+WB---\n",
+                "--+-----\n",
+                "--------"
             )
         );
 
-        put(get_pos(2, 3), &mut board.black, &mut board.white);
+        put(get_pos(2, 3), &mut board.player, &mut board.opponent);
         assert_eq!(
-            board.to_string_as_board(),
+            board.to_string_as_board(&Color::Black),
             concat!(
-                "        \n",
-                "        \n",
-                "        \n",
-                "  BBB   \n",
-                "   BB   \n",
-                "   WB   \n",
-                "        \n",
-                "        "
+                "--------\n",
+                "--------\n",
+                "--------\n",
+                "--BBB---\n",
+                "---BB---\n",
+                "--+WB---\n",
+                "--++----\n",
+                "--------"
             )
         );
     }
