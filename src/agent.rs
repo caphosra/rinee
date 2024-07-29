@@ -1,8 +1,6 @@
 use crate::{
-    blsmsk64,
-    board::{from_pos, get_valid_moves, Board, BoardView},
+    board::{get_valid_moves, Board, BoardView},
     popcnt64,
-    proto::Color,
     tzcnt64,
 };
 
