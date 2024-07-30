@@ -1,8 +1,7 @@
-use std::time::Duration;
-
-use async_std::{
-    io::{prelude::BufReadExt, BufReader, BufWriter, WriteExt},
+use std::{
+    io::{BufRead, BufReader, BufWriter, Write},
     net::TcpStream,
+    time::Duration,
 };
 
 use crate::{
@@ -23,24 +22,22 @@ pub async fn do_move(
         Some(view) => {
             put(view, &mut board.player, &mut board.opponent);
             let (x, y) = from_pos(view);
-            writer
-                .write(format!("MOVE {}{}\n", (b'A' + x) as char, y + 1).as_bytes())
-                .await?;
+            writer.write(format!("MOVE {}{}\n", (b'A' + x) as char, y + 1).as_bytes())?;
 
             write_log!(LOG, "ME {}{}", (b'A' + x) as char, y + 1);
             print_board!(LOG, board, &me);
         }
         None => {
-            writer.write(b"MOVE PASS\n").await?;
+            writer.write(b"MOVE PASS\n")?;
         }
     }
-    writer.flush().await?;
+    writer.flush()?;
     Ok(())
 }
 
 pub async fn play_game(args: &Args) -> Result<(), Error> {
     let addr = format!("{}:{}", args.host, args.port);
-    let stream = TcpStream::connect(addr).await?;
+    let stream = TcpStream::connect(addr)?;
     let mut reader = BufReader::new(&stream);
     let mut writer = BufWriter::new(&stream);
 
@@ -49,16 +46,14 @@ pub async fn play_game(args: &Args) -> Result<(), Error> {
     let mut board = new_board(&Color::Black);
     let mut me = Color::Black;
 
-    writer
-        .write(format!("OPEN {}\n", args.name).as_bytes())
-        .await?;
-    writer.flush().await?;
+    writer.write(format!("OPEN {}\n", args.name).as_bytes())?;
+    writer.flush()?;
 
     write_log!(DEBUG, "Sent OPEN");
 
     loop {
         let mut buf = String::new();
-        reader.read_line(&mut buf).await?;
+        reader.read_line(&mut buf)?;
 
         let req = parse_request(&buf)?;
 

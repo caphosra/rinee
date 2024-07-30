@@ -30,7 +30,7 @@ struct Args {
     pub name: String,
 }
 
-#[async_std::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 20)]
 async fn main() {
     let args = Args::parse();
 
