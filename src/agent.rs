@@ -19,31 +19,28 @@ use crate::{
 pub fn evaluate(board: Board) -> i32 {
     let pl = popcnt64!(board.player);
     let op = popcnt64!(board.opponent);
-    if pl + op == 64 {
-        pl - op
+    if pl + op > 60 {
+        (pl - op) * 64
     } else {
-        (get_confirm_stone(board.player) - get_confirm_stone(board.opponent)) * 100
+        (get_confirm_stone(board.player) - get_confirm_stone(board.opponent)) * 64
             + (popcnt64!(board.player & 0x8100000000000081)
                 - popcnt64!(board.opponent & 0x8100000000000081))
-                * 300
-            + (popcnt64!(board.player & 0x4281000000008142)
+                * 16
+            - (popcnt64!(board.player & 0x4281000000008142)
                 - popcnt64!(board.opponent & 0x4281000000008142))
-                * (-120)
-            + (popcnt64!(board.player & 0x0040000000000200)
+                * 4
+            - (popcnt64!(board.player & 0x0040000000000200)
                 - popcnt64!(board.opponent & 0x0040000000000200))
-                * (-240)
+                * 8
             + (popcnt64!(board.player & 0x2400810000810024)
                 - popcnt64!(board.opponent & 0x2400810000810024))
-                * 60
+                * 2
             + (popcnt64!(board.player & 0x1800248181240018)
                 - popcnt64!(board.opponent & 0x1800248181240018))
-                * 15
             + (popcnt64!(board.player & 0x0000182424180000)
                 - popcnt64!(board.opponent & 0x0000182424180000))
-                * 3
-            + (popcnt64!(board.player & 0x003c424242423c00)
+            - (popcnt64!(board.player & 0x003c424242423c00)
                 - popcnt64!(board.opponent & 0x003c424242423c00))
-                * (-3)
     }
 }
 
@@ -130,7 +127,7 @@ pub fn alpha_beta(
 }
 
 pub async fn search_move(interrupt: Arc<AtomicBool>, view: BoardView, board: Board) {
-    let mut depth = 1;
+    let mut depth = 5;
 
     let mut board = board;
     put(view, &mut board.player, &mut board.opponent);
@@ -157,7 +154,7 @@ static CHOICES: LazyLock<Mutex<HashMap<BoardView, i32>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 pub async fn select_best_move(board: Board, duration: Duration) -> Option<BoardView> {
-    let mut valid = get_valid_moves(board.player, board.opponent);
+    let valid = get_valid_moves(board.player, board.opponent);
     let count = popcnt64!(valid);
 
     if count == 0 {
@@ -173,9 +170,10 @@ pub async fn select_best_move(board: Board, duration: Duration) -> Option<BoardV
         let interrupt = Arc::new(AtomicBool::new(false));
 
         let mut tasks = Vec::new();
-        while valid != 0 {
-            let view = 1 << tzcnt64!(valid);
-            valid ^= view;
+        let mut counter = valid;
+        while counter != 0 {
+            let view = 1 << tzcnt64!(counter);
+            counter ^= view;
 
             tasks.push(tokio::spawn(search_move(interrupt.clone(), view, board)));
         }

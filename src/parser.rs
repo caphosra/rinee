@@ -35,12 +35,17 @@ pub fn parse_request(req: &str) -> Result<Request, Error> {
             }
         },
         "ACK" => {
-            let remains = req
+            let remains: i64 = req
                 .next()
                 .ok_or(Error::Parser)?
                 .parse()
                 .map_err(|_| Error::Parser)?;
-            Ok(Request::Ack { remains })
+            if remains < 0 {
+                Ok(Request::Ack { remains: 0 })
+            }
+            else {
+                Ok(Request::Ack { remains: remains as u64 })
+            }
         }
         "END" => {
             let result = match req.next().ok_or(Error::Parser)? {

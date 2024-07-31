@@ -72,6 +72,9 @@ ADD `--release` BUILD FLAG TO LET THIS AI RUN WITHOUT RESTRICTIONS."
         Err(Error::Parser) => {
             write_log!(ERROR, "Detected a parser error.");
         }
+        Err(Error::ParserWithMessage(message)) => {
+            write_log!(ERROR, "Detected an error on parsing \"{}\".", message);
+        }
     }
 }
 

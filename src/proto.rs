@@ -1,6 +1,7 @@
 pub enum Error {
     IO(std::io::Error),
     Parser,
+    ParserWithMessage(String),
 }
 
 impl From<std::io::Error> for Error {
@@ -50,7 +51,7 @@ pub enum Request {
     Start {
         color: Color,
         opponent: String,
-        remains: u32,
+        remains: u64,
     },
     Move {
         x: u8,
@@ -59,7 +60,7 @@ pub enum Request {
     Pass,
     GiveUp,
     Ack {
-        remains: u32,
+        remains: u64,
     },
     End {
         result: GameResult,
