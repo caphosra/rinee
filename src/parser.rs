@@ -42,9 +42,10 @@ pub fn parse_request(req: &str) -> Result<Request, Error> {
                 .map_err(|_| Error::Parser)?;
             if remains < 0 {
                 Ok(Request::Ack { remains: 0 })
-            }
-            else {
-                Ok(Request::Ack { remains: remains as u64 })
+            } else {
+                Ok(Request::Ack {
+                    remains: remains as u64,
+                })
             }
         }
         "END" => {

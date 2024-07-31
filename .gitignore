@@ -24,3 +24,5 @@ Cargo.lock
 bin/
 .vscode/
 .venv/
+data/*
+!data/.gitkeep
