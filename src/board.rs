@@ -5,7 +5,7 @@
 //  https://qiita.com/sensuikan1973/items/459b3e11d91f3cb37e43 (Swift)
 //
 
-use crate::{proto::Color, tzcnt64};
+use crate::{popcnt64, proto::Color, tzcnt64};
 
 pub type BoardView = u64;
 
@@ -37,6 +37,69 @@ pub fn get_pos(x: u8, y: u8) -> BoardView {
 pub fn from_pos(view: BoardView) -> (u8, u8) {
     let v = tzcnt64!(view);
     ((v & 0b111) as u8, (v >> 3) as u8)
+}
+
+pub fn get_confirm_stone(me: BoardView) -> i32 {
+    macro_rules! get_confirm_stone_internal {
+        ($victim:expr, $shift:tt, $shift_num:expr, $mask:expr) => {
+            let mut mask = me;
+            for _ in 0..7 {
+                mask = (mask $shift $shift_num) | $mask;
+                $victim &= mask;
+            }
+        };
+    }
+
+    // Left up
+    let mut left_up = me;
+    get_confirm_stone_internal!(left_up, <<, 9, 0x01010101010101FF);
+    get_confirm_stone_internal!(left_up, <<, 8, 0x00000000000000FF);
+    get_confirm_stone_internal!(left_up, <<, 1, 0x0101010101010101);
+
+    let mut left_up1 = left_up;
+    get_confirm_stone_internal!(left_up1, <<, 7, 0x80808080808080FF);
+    let mut left_up2 = left_up;
+    get_confirm_stone_internal!(left_up2, >>, 7, 0xFF01010101010101);
+    left_up &= left_up1 | left_up2;
+
+    // Right up
+    let mut right_up = me;
+    get_confirm_stone_internal!(right_up, <<, 8, 0x00000000000000FF);
+    get_confirm_stone_internal!(right_up, <<, 7, 0x80808080808080FF);
+    get_confirm_stone_internal!(right_up, >>, 1, 0x8080808080808080);
+
+    let mut right_up1 = right_up;
+    get_confirm_stone_internal!(right_up1, <<, 9, 0x01010101010101FF);
+    let mut right_up2 = right_up;
+    get_confirm_stone_internal!(right_up2, >>, 9, 0xFF80808080808080);
+    right_up &= right_up1 | right_up2;
+
+    // Left down
+    let mut left_down = me;
+    get_confirm_stone_internal!(left_down, <<, 1, 0x0101010101010101);
+    get_confirm_stone_internal!(left_down, >>, 7, 0xFF01010101010101);
+    get_confirm_stone_internal!(left_down, >>, 8, 0xFF00000000000000);
+
+    let mut left_down1 = left_down;
+    get_confirm_stone_internal!(left_down1, <<, 9, 0x01010101010101FF);
+    let mut left_down2 = left_down;
+    get_confirm_stone_internal!(left_down2, >>, 9, 0xFF80808080808080);
+    left_down &= left_down1 | left_down2;
+
+    // Right down
+    let mut right_down = me;
+    get_confirm_stone_internal!(right_down, >>, 1, 0x8080808080808080);
+    get_confirm_stone_internal!(right_down, >>, 8, 0xFF00000000000000);
+    get_confirm_stone_internal!(right_down, >>, 9, 0xFF80808080808080);
+
+    let mut right_down1 = right_down;
+    get_confirm_stone_internal!(right_down1, <<, 7, 0x80808080808080FF);
+    let mut right_down2 = right_down;
+    get_confirm_stone_internal!(right_down2, >>, 7, 0xFF01010101010101);
+    right_down &= right_down1 | right_down2;
+
+    let mask = left_up | right_up | left_down | right_down;
+    popcnt64!(me & mask)
 }
 
 ///
@@ -209,6 +272,12 @@ mod test {
             moves,
             get_pos(3, 2) | get_pos(2, 3) | get_pos(5, 4) | get_pos(4, 5)
         );
+    }
+
+    #[test]
+    fn test_get_confirm_stone() {
+        assert_eq!(get_confirm_stone(0x07010F), 6);
+        assert_eq!(get_confirm_stone(0x070707), 6);
     }
 
     #[test]

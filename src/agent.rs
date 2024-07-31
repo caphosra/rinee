@@ -1,19 +1,53 @@
 use std::{
-    cmp::{max, min}, collections::HashMap, sync::{
+    cmp::{max, min},
+    collections::HashMap,
+    i32,
+    sync::{
         atomic::{AtomicBool, Ordering},
         Arc, LazyLock, Mutex,
-    }, thread::sleep, time::Duration
+    },
+    thread::sleep,
+    time::Duration,
 };
 
 use crate::{
-    board::{get_valid_moves, put, Board, BoardView},
+    board::{get_confirm_stone, get_valid_moves, put, Board, BoardView},
     popcnt64, tzcnt64, write_log,
 };
 
 #[inline]
 pub fn evaluate(board: Board) -> i32 {
-    popcnt64!(board.player)
+    let pl = popcnt64!(board.player);
+    let op = popcnt64!(board.opponent);
+    if pl + op == 64 {
+        pl - op
+    } else {
+        (get_confirm_stone(board.player) - get_confirm_stone(board.opponent)) * 100
+            + (popcnt64!(board.player & 0x8100000000000081)
+                - popcnt64!(board.opponent & 0x8100000000000081))
+                * 300
+            + (popcnt64!(board.player & 0x4281000000008142)
+                - popcnt64!(board.opponent & 0x4281000000008142))
+                * (-120)
+            + (popcnt64!(board.player & 0x0040000000000200)
+                - popcnt64!(board.opponent & 0x0040000000000200))
+                * (-240)
+            + (popcnt64!(board.player & 0x2400810000810024)
+                - popcnt64!(board.opponent & 0x2400810000810024))
+                * 60
+            + (popcnt64!(board.player & 0x1800248181240018)
+                - popcnt64!(board.opponent & 0x1800248181240018))
+                * 15
+            + (popcnt64!(board.player & 0x0000182424180000)
+                - popcnt64!(board.opponent & 0x0000182424180000))
+                * 3
+            + (popcnt64!(board.player & 0x003c424242423c00)
+                - popcnt64!(board.opponent & 0x003c424242423c00))
+                * (-3)
+    }
 }
+
+const INF: i32 = i32::MAX - 100;
 
 pub fn alpha_beta(
     interrupt: &Arc<AtomicBool>,
@@ -33,7 +67,30 @@ pub fn alpha_beta(
         get_valid_moves(board.opponent, board.player)
     };
 
-    if depth == 0 || popcnt64!(valid) == 0 {
+    // When there is no valid move.
+    if popcnt64!(valid) == 0 {
+        let valid = if player {
+            get_valid_moves(board.opponent, board.player)
+        } else {
+            get_valid_moves(board.player, board.opponent)
+        };
+        // Is the game over?
+        if popcnt64!(valid) == 0 {
+            let player_num = popcnt64!(board.player);
+            let opponent_num = popcnt64!(board.opponent);
+            if player_num > opponent_num {
+                return Ok(INF);
+            } else if player_num < opponent_num {
+                return Ok(-INF);
+            } else {
+                return Ok(0);
+            }
+        } else {
+            return alpha_beta(interrupt, board, !player, depth, alpha, beta);
+        }
+    }
+
+    if depth == 0 {
         Ok(evaluate(board))
     } else {
         let mut alpha = alpha;
@@ -78,10 +135,14 @@ pub async fn search_move(interrupt: Arc<AtomicBool>, view: BoardView, board: Boa
     let mut board = board;
     put(view, &mut board.player, &mut board.opponent);
 
-    while let Ok(score) = alpha_beta(&interrupt, board, false, depth, -1000, 1000) {
+    while let Ok(score) = alpha_beta(&interrupt, board, false, depth, i32::MIN, i32::MAX) {
         CHOICES.lock().unwrap().insert(view, score);
 
         write_log!(DEBUG, "View{}: depth = {}, score = {}", view, depth, score);
+
+        if score == INF || score == -INF {
+            break;
+        }
 
         depth += 1;
         if depth >= 60 {
