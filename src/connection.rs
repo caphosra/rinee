@@ -119,6 +119,7 @@ pub async fn play_game(args: &Args) -> Result<(), Error> {
                         put(get_pos(2, 3), &mut board.player, &mut board.opponent);
                         writer.write("MOVE C4\n".as_bytes())?;
                         writer.flush()?;
+                        history += "C4";
                     }
                     _ => {}
                 }
@@ -130,6 +131,7 @@ pub async fn play_game(args: &Args) -> Result<(), Error> {
                 write_log!(LOG, "OPPONENT {}{}", (b'A' + x) as char, y + 1);
                 print_board!(LOG, board, &me);
 
+                write_log!(DEBUG, "History: {}", history);
                 if let Some(best_move) = table.get(&history) {
                     write_log!(DEBUG, "Preprocessed move: {}", best_move);
 
@@ -138,6 +140,8 @@ pub async fn play_game(args: &Args) -> Result<(), Error> {
 
                     write_log!(LOG, "ME {}", best_move);
                     print_board!(LOG, board, &me);
+
+                    history += best_move;
 
                     let mut best_move = best_move.chars();
                     let x = best_move.next().ok_or(Error::Parser)? as u8 - 'A' as u8;
